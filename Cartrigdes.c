@@ -108,7 +108,7 @@ uint32_t Cartridge_bus_write_bank_dispatcher(Cartridge *cart, uint8_t bank , uin
         The registers are not directly readable.
         The explanation is easy, there is no inside registers. The CPU send a write instruction to the ROM but cannot write (read only memory) so instead the mbc chip will intercept the bus and the value, that's how he create his regs.
 
-        This 5-bit register (located in the [$01-$1F] region can reach bank1 to bank31) selects the ROM bank number for the 4000–7FFF region (The switchable one). 
+        This 5-bit register (can reach(bank : $01-$1F) in decimal its bank1 to bank31) selects the ROM bank number for the 4000–7FFF region (The switchable one). 
         Higher bits are discarded, exemple : writing $E1 (binary 11100001) - take only 5-bits (LSB one) to this register and would select bank $01.
 
         Important : the bank n°0 cannot change place or dumped into another bank so anytime the cpu addresses to the bank0, the zero is immediatly replaced by a 1.
