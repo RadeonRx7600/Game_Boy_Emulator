@@ -81,38 +81,5 @@ void opcodes(Registers *cpu) {
         }
 }
 
-bool Cartridge_load(Registers *cart, const char *path)
-{
-    FILE *file = fopen(path, "rb");
-    
-    if (file == NULL) {
-        perror("Error with fopen ");
-        return false;
-    } 
-    else {
-    fseek(file, 0, SEEK_END); 
-    cart->rom_size = ftell(file);
-
-    rewind(file);
-    cart->Rom = malloc(cart->rom_size);
-
-    fread(cart->Rom, 1, cart->rom_size , file);
-    fclose(file);
-
-    return true;
-    }
-}
-
-int main(void){
-
-    Registers *ROMA;
-    Cartridge_load(ROMA,"/home/juan/Bureau/eco-system/Code/C,C++/Game_Boy_Emu/ROMS/[BIOS] Nintendo Game Boy Boot ROM (World) (Rev 1).gb");
-    ROMA->pc = 3;
-    opcodes(ROMA);
-
-    printf("SP = %i\n",ROMA->sp);
-    printf("PC = %i\n",ROMA->pc);
-    printf("A = %i\n",ROMA->af.hi);
-
     return 0;
 }
