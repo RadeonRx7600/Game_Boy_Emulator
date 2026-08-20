@@ -127,33 +127,3 @@ uint32_t Cartridge_bus_write_bank_dispatcher(Cartridge *cart, uint8_t bank , uin
 
     return offset;
 }
-
-int main(void) {
-
-    /*
-        For the moment : 
-            File name is : ...
-            Rom_size is 65536 long.
-            Malloc is 0x60f98cb088a0 checked.
-            checksum verified;
-            The Cart_type is : 1
-            Bool status Ram Enabled = 0
-            the Ram_size is : 0
-            the Rom_size_code is : 1
-
-            ROM = 64KiB;
-            TypeRom = MCB1;
-            Rom_Size 64KiB with 4 banks;
-            No RAM code : 0;
-    */
-    Cartridge cart;
-
-    char *Game_Rom_File = "ur file with the gameRom"; // for test (Rom not include)
-    bool debug = Cartridge_load(&cart, Game_Rom_File);
-    if (debug == 0) { printf("Cartridge Error loaded bool = 0");};
-    Header_Rom_Reader(&cart);
-
-    // main is a test not the final one, just for me :D
-
-    return 0;
-};
