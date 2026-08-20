@@ -12,7 +12,6 @@
         the code is done to run (Super Mario Land) only, No RAM/ no cartridge bigger than 64KiB and only MBC1.
 
         Disclamer -> : no Cartridge or any ROM types will be provided.
-        Caution -> Becarefull on the net when downloading ROMs, check their integrities first with cheksum header or sha256.
 
 */
 
