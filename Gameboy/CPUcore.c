@@ -2,28 +2,34 @@
 #include<stdint.h>
 
 /*
-    This is my co-work with Ravioli my Master Sama on the CPUcore part, it will be
-    difficult but a side kick always honor his master. YEHAW SIR 
-
+Bit | Name | Explanation
+-----------------------------------
+7	|   z  | Zero flag
+6	|   n  | Subtraction flag (BCD)
+5	|   h  | Half Carry flag  (BCD)
+4	|   c  | Carry flag
 */
 
 typedef union {
+    uint16_t value;
     struct {
-        // 8-bit Registers
         uint8_t lo;
         uint8_t hi;
     };
-    uint16_t value;
 } Reg16;
 
 typedef struct {
-    // 8-bit Registers / 16-bit
     Reg16 af;
     Reg16 bc;
     Reg16 de;
     Reg16 hl;
 
-    // 16-bit Registers
     uint16_t sp;
     uint16_t pc;
+
+    bool z;
+    bool n;
+    bool h;
+    bool c;
+
 } Registers;
