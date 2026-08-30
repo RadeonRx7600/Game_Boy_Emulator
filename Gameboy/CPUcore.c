@@ -1,15 +1,6 @@
 #include<stdio.h>
 #include<stdint.h>
 
-/*
-Bit | Name | Explanation
------------------------------------
-7	|   z  | Zero flag
-6	|   n  | Subtraction flag (BCD)
-5	|   h  | Half Carry flag  (BCD)
-4	|   c  | Carry flag
-*/
-
 typedef union {
     uint16_t value;
     struct {
@@ -31,5 +22,9 @@ typedef struct {
     bool n;
     bool h;
     bool c;
+
+    bool HALTED;
+    bool PendingInterruptEnabled;
+    bool IME;
 
 } Registers;
