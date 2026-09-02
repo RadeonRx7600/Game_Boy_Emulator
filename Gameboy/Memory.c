@@ -21,6 +21,7 @@
 */
 
 typedef struct {
+	Cartridge *cart;
 	uint8_t Memory[0x2000];
     uint8_t VRAM[0x2000];
 
@@ -38,21 +39,17 @@ void write_memory8 (RAM *ram ,uint8_t value ,uint16_t addr) {
 	ram->Memory[addr] = value;
 }
 
-void write_memory16(RAM *ram, uint16_t value, uint16_t addr)
-{
+void write_memory16(RAM *ram, uint16_t value, uint16_t addr) {
     ram->Memory[addr] = value;
     ram->Memory[addr + 1] = value >> 8;
 }
 
-uint8_t read_byte(Cartridge *cart, uint16_t address)
-{
+uint8_t read_byte(Cartridge *cart, uint16_t address) {
     return cart->rom[address];
 }
 
-uint16_t read_word(Cartridge *cart, uint16_t address)
-{
+uint16_t read_word(Cartridge *cart, uint16_t address) {
     uint8_t lo = read_byte(cart, address);
     uint8_t hi = read_byte(cart, address + 1);
-
     return (uint16_t)(lo | (hi << 8));
 }
