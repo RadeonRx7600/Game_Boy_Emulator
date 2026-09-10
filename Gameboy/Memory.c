@@ -4,10 +4,9 @@
 #include<stdbool.h>
 
 /*
-	General Memory Map
-	  0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00)      	 --done in cartridge.c--
-	  4000-7FFF   16KB ROM Bank 01..NN (in cartridge, switchable bank number) 	 --done in cartridge.c--
-
+	General Memory Map: 
+	  0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00) 
+	  4000-7FFF   16KB ROM Bank 01..NN (in cartridge, switchable bank number)
 	  8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode)
 	  A000-BFFF   8KB External RAM     (in cartridge, switchable bank, if any)
 	  C000-CFFF   4KB Work RAM Bank 0 (WRAM)
@@ -17,14 +16,13 @@
 	  FEA0-FEFF   Not Usable
 	  FF00-FF7F   I/O Ports
 	  FF80-FFFE   High RAM (HRAM)
-	  FFFF        Interrupt Enable Register
+	       FFFF   Interrupt Enable Register
 */
 
 typedef struct {
 	Cartridge *cart;
 	uint8_t Memory[0x2000];
     uint8_t VRAM[0x2000];
-
 }RAM;
 
 uint8_t read_memory8 (RAM *ram, uint16_t addr) {
@@ -36,20 +34,51 @@ uint16_t read_memory16 (RAM *ram, uint16_t addr) {
 }
 
 void write_memory8 (RAM *ram ,uint8_t value ,uint16_t addr) {
-	ram->Memory[addr] = value;
+	if (addr >= 0x2000 && addr <= 0x3FFF) {
+		ram->cart->current_bank = value & 0x03;
+	}
+	else if (addr == 0xFF04) {
+		ram->Memory[0xFF04] = 0;
+	}
+	else {
+		ram->Memory[addr] = value;
+	}
 }
 
 void write_memory16(RAM *ram, uint16_t value, uint16_t addr) {
+	if (addr >= 0x2000 && addr <= 0x3FFF) {
+		ram->cart->current_bank = value & 0x03;
+	}
     ram->Memory[addr] = value;
     ram->Memory[addr + 1] = value >> 8;
+
+	// can bug if Write uint16_t is written in DIV reg : TODO
 }
 
 uint8_t read_byte(Cartridge *cart, uint16_t address) {
-    return cart->rom[address];
+	if (addr < 0x4000) {
+		return cart->rom[addr];
+	}
+	else {
+		int16_t offset = cart->current_bank * 0x4000 + (addr - 0x4000);
+		return cart->rom[offset];
+	}
 }
 
 uint16_t read_word(Cartridge *cart, uint16_t address) {
-    uint8_t lo = read_byte(cart, address);
-    uint8_t hi = read_byte(cart, address + 1);
-    return (uint16_t)(lo | (hi << 8));
+	if (addr < 0x4000) {
+
+		uint8_t lo = read_byte(cart, addr);
+    	uint8_t hi = read_byte(cart, addr + 1);
+
+    	return (uint16_t)(lo | (hi << 8));
+	}
+	else {
+
+		uint8_t lo = read_byte(cart, addr);
+    	uint8_t hi = read_byte(cart, addr + 1);
+
+		int16_t offset = cart->current_bank * 0x4000 + ((uint16_t)(lo | (hi << 8)) - 0x4000);
+		return offset;
+	}
 }
