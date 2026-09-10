@@ -3,18 +3,12 @@
 #include<stdbool.h>
 #include<stdint.h>
 
-
-/*  - v0.1.0 :
-
-        I am using https://gbdev.io/pandocs/MBCs.html which tells everthing about the Cartridge.
-        Its the best documentation I could find. For this section we're emulating the whole Cartridge process.
-        The current version of this project is v0.1.0 for this version I did the minimun so I mean,
-        the code is done to run (Super Mario Land) only, No RAM/ no cartridge bigger than 64KiB and only MBC1.
-
-        Disclamer -> : no Cartridge or any ROM types will be provided.
-
+/*
+   I am using https://gbdev.io/pandocs/MBCs.html which tells everthing about the Cartridge.
+   Its the best documentation I could find. For this section we're emulating the whole Cartridge process.
+   The current version of this project is v0.1.0 for this version I did the minimun so I mean,
+   the code is done to run (Super Mario Land) only, No RAM/ no cartridge bigger than 64KiB and only MBC1;
 */
-
 
 typedef struct {
 
@@ -27,13 +21,13 @@ typedef struct {
     uint8_t ram_size_code;
     uint8_t rom_size_code;
 
-    uint8_t current_bank;    // 2000–3FFF — ROM Bank Number (Write Only) (called the 5-bits register);
+    uint8_t current_bank;    // 2000–3FFF — ROM Bank Number (Write Only) (called the 5-bits register); 
     uint8_t rom_bank_high2; // 4000–5FFF — RAM Bank Number or Upper Bits of ROM Bank Number (Write Only);
     uint8_t banking_mode;  // later ...;
 
 } Cartridge;
 
-bool Cartridge_load(Cartridge *cart, const char *path) // Return True if the file has been loaded into *ROM_struct;
+bool Cartridge_load(Cartridge *cart, const char *path) // Return True if the file loads into *ROM_struct;
 {
     printf("\n-File name is : %s\n",path); //
     FILE *file = fopen(path, "rb");
@@ -43,15 +37,15 @@ bool Cartridge_load(Cartridge *cart, const char *path) // Return True if the fil
         return false;
     } 
     else {
-    fseek(file, 0, SEEK_END); // fseek(FILE * fptr, long int offset, int origin);
-    cart->rom_size = ftell(file); // tell where the file indicator is (elements [.] in this case it gives the total lenght of file because seekend aim at EOF;
-    printf("-Rom_size is %zu long.\n",cart->rom_size); //
+    fseek(file, 0, SEEK_END);
+    cart->rom_size = ftell(file); 
+    printf("-Rom_size is %zu long.\n",cart->rom_size); 
 
     rewind(file);
     cart->rom = malloc(cart->rom_size);
     printf("-Malloc is at %p checked.\n",(void *)cart->rom);
 
-    fread(cart->rom, 1, cart->rom_size , file); //fread(void * destination, size_t size, size_t amount, FILE * fptr);
+    fread(cart->rom, 1, cart->rom_size , file);
     fclose(file);
 
     return true;
@@ -63,8 +57,8 @@ void Header_Rom_Reader(Cartridge *cart) {
     /*  
         0x0100 - 0x014F is the region where the header file belong (header file is in Bank0),
         in the header file you can find a lot of importants informations about the cartridge.
-        https://gbdev.io/pandocs/The_Cartridge_Header.html gives every parts and their regions.
-        Most used to debug and verify, but I will develop it further in the v1.
+        https://gbdev.io/pandocs/The_Cartridge_Header.html ,gives every parts and their regions.
+        Most used to debug and verify, but I will develop it further in an other version.
     */
 
     uint8_t checksum = 0; // this section tries a cheksum located at [0x14D]
@@ -73,11 +67,9 @@ void Header_Rom_Reader(Cartridge *cart) {
     }
     if (checksum == cart->rom[0x014D]) {
         printf("-Checksum verified;\n");
-    }
-    else {
+    } else {
         printf("-Header not correct wrong checksum verify the integrity;\n"); 
     }
-
    
     cart->type = cart->rom[0x147]; 
     printf("-The Cart_type is : %i\n",cart->type);
@@ -92,12 +84,11 @@ void Header_Rom_Reader(Cartridge *cart) {
 
     printf("-The Ram_size is : %u\n",cart->ram_size_code);
 
-    cart->rom_size_code = cart->rom[0x148]; //tells the lenght on one byte ; ex : 0x1 is 64KiB  / 0x2 is 128 KiB
+    cart->rom_size_code = cart->rom[0x148]; //tells the lenght on one byte ; ex : 0x1 is 64KiB  / 0x2 is 128 KiB /0x3 is ..etc
     printf("-The Rom_size_code is : %u\n",cart->rom_size_code);
+}
 
-};
-
-uint32_t Cartridge_bus_write_bank_dispatcher(Cartridge *cart, uint8_t bank , uint16_t addr) {
+// I deleted the cartridge_bus_dispatcher function because it causes bugs, now to know which Bank is in the switchable you need to go in Memory.c / if you want to know more read the text below ;D
 
     /*
         The MBC1 chip includes four registers that affect the behaviour of the chip.
@@ -112,17 +103,3 @@ uint32_t Cartridge_bus_write_bank_dispatcher(Cartridge *cart, uint8_t bank , uin
 
         Important : the bank n°0 cannot change place or dumped into another bank so anytime the cpu addresses to the bank0, the zero is immediatly replaced by a 1.
     */
-    
-    if (addr >= 0x2000 && addr <= 0x3FFF) // region bank1
-    {
-        cart->current_bank = bank & 0x03;
-
-        if (cart->current_bank == 0) {
-            cart->current_bank = 1;
-        }
-    }
-
-    int32_t offset = cart->current_bank * 0x4000 + (addr - 0x4000); // bank number * one bank size so 0x4000(16KiB) + the address the bus sent for example [0x5209] minus 0x4000 bc the cpu can only address at the switchable bank [0x4000 - 0x7FFF] so it starts at 0x4000 (see pdf or pan doc)
-
-    return offset;
-}
