@@ -26,6 +26,4 @@ bool Cartridge_load(Cartridge *cart, const char *path);
 
 void Header_Rom_Reader(Cartridge *cart);
 
-uint32_t Cartridge_bus_write_bank_dispatcher(Cartridge *cart, uint8_t bank , uint16_t addr);
-
 #endif
