@@ -1,21 +1,23 @@
 NAME = Gameboy
 
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -Iinclude
+CFLAGS = -Wall -Wextra -Werror -Iinclude $(shell sdl2-config --cflags)
+LDFLAGS = $(shell sdl2-config --libs)
 
 SRC = GB/Core.c \
       GB/Cartridges.c \
       GB/CPU.c \
       GB/Memory.c \
       GB/Opcodes_table.c \
-      GB/Op_prefCB.c
+      GB/Op_prefCB.c \
+	  GB/PPU.c
 
 OBJ = $(SRC:GB/%.c=Build/%.o)
 
 all: $(NAME)
 
 $(NAME): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
+	$(CC) $(CFLAGS) $(OBJ) -o $(NAME) $(LDFLAGS)
 
 Build/%.o: GB/%.c
 	@mkdir -p Build
