@@ -79,6 +79,6 @@ uint16_t read_word(Cartridge *cart, uint16_t address) {
     	uint8_t hi = read_byte(cart, addr + 1);
 
 		int16_t offset = cart->current_bank * 0x4000 + ((uint16_t)(lo | (hi << 8)) - 0x4000);
-		return offset;
+		return cart->rom[offset];
 	}
 }
