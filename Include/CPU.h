@@ -4,7 +4,7 @@
 #include<stdint.h>
 #include<stdbool.h>
 
-#include"/home/juan/Bureau/eco-system/Code/C,C#/Game_Boy_Emu/include/Memory.h"
+#include"Memory.h"
 
 typedef union {
     uint16_t value;
