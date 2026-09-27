@@ -66,19 +66,13 @@ uint8_t read_byte(Cartridge *cart, uint16_t address) {
 }
 
 uint16_t read_word(Cartridge *cart, uint16_t address) {
-	if (addr < 0x4000) {
-
+	
 		uint8_t lo = read_byte(cart, addr);
     	uint8_t hi = read_byte(cart, addr + 1);
 
     	return (uint16_t)(lo | (hi << 8));
-	}
-	else {
+}
 
-		uint8_t lo = read_byte(cart, addr);
-    	uint8_t hi = read_byte(cart, addr + 1);
-
-		int16_t offset = cart->current_bank * 0x4000 + ((uint16_t)(lo | (hi << 8)) - 0x4000);
-		return cart->rom[offset];
-	}
+void DMA_transfer(uint8_t data) {
+	// later i did just fix a bug above !
 }
