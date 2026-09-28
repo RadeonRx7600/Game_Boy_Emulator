@@ -99,15 +99,23 @@ uint8_t check_interrupts(Registers *cpu, RAM *ram) {
 
 void init_GB(Registers *cpu, RAM *ram) {
     
-    // Gameboy init (http://bgb.bircd.org/pandocs.htm#powerupsequence)
+    // Gameboy init ( -- http://bgb.bircd.org/pandocs.htm#powerupsequence )
 
     //CPU init --;
-    cpu->af.value = 432;
-    cpu->bc.value = 19;
-    cpu->de.value = 216;
-    cpu->hl.value = 333;
-    cpu->pc = 100;
-    cpu->sp = 65534;
+    cpu->af.value = 0x01B0;
+    cpu->bc.value = 0x0013;
+    cpu->de.value = 0x00D8;
+    cpu->hl.value = 0x014D;
+    cpu->pc = 0x0100;
+    cpu->sp = 0xFFFE;
+
+    cpu->nf = false;
+    cpu->hf = true;
+    cpu->zf = true;
+    cpu->cf = true;
+    cpu->IME = false;
+    cpu->HALTED = false;
+    cpu->InterruptionPending = false;
 
     //Memory init --;
     ram->Memory[0xFF05] = 0x00;
@@ -133,6 +141,7 @@ void init_GB(Registers *cpu, RAM *ram) {
 	ram->Memory[0xFF25] = 0xF3;
 	ram->Memory[0xFF26] = 0xF1;
 	ram->Memory[0xFF40] = 0x91;
+    ram->Memory[0xFF41] = 0x02;
 	ram->Memory[0xFF42] = 0x00;
 	ram->Memory[0xFF43] = 0x00;
 	ram->Memory[0xFF45] = 0x00;
@@ -142,6 +151,7 @@ void init_GB(Registers *cpu, RAM *ram) {
 	ram->Memory[0xFF4A] = 0x00;
 	ram->Memory[0xFF4B] = 0x00;
 	ram->Memory[0xFFFF] = 0x00;
+    
 }
 
 void print_binary(uint8_t n) {
@@ -150,18 +160,19 @@ void print_binary(uint8_t n) {
 }
 
 void dump_state_Logs(Registers *cpu ,RAM *ram) {
-	printf("===========================");
+	printf("===========================\n");
 	printf("AF = %i\n",cpu->af.value);
 	printf("BC = %i\n",cpu->bc.value);
 	printf("DE = %i\n",cpu->de.value);
 	printf("HL = %i\n",cpu->hl.value);
 	printf("PC = %i\n",cpu->pc);
 	printf("SP = %i\n",cpu->sp);
-
-	printf("\n===========================");
+    
 	printf("Ram[IE 0xFFFF] = ");
 	print_binary(ram->Memory[0xFFFF]);
+    printf("\n");
 
-	printf("\nRam[IF 0xFF0F] = ");
+	printf("Ram[IF 0xFF0F] = ");
 	print_binary(ram->Memory[0xFF0F]);
+    printf("\n===========================\n");
 }
