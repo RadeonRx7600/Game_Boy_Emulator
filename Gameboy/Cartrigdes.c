@@ -2,104 +2,85 @@
 #include<stdlib.h>
 #include<stdbool.h>
 #include<stdint.h>
+#include"/home/juan/Bureau/eco-system/Code/C,C#/Game_Boy_Emu.REV1/Include/Cartridge.h"
 
-/*
-   I am using https://gbdev.io/pandocs/MBCs.html which tells everthing about the Cartridge.
-   Its the best documentation I could find. For this section we're emulating the whole Cartridge process.
-   The current version of this project is v0.1.0 for this version I did the minimun so I mean,
-   the code is done to run (Super Mario Land) only, No RAM/ no cartridge bigger than 64KiB and only MBC1;
-*/
+void Header_Rom_Setter(Cartridge *cart) { 
 
-typedef struct {
+    //https://gbdev.io/pandocs/The_Cartridge_Header.html
 
-    uint8_t *rom;
-    size_t rom_size;
-    uint8_t bank_register;
+    // CHECKSUM [0x14D]
+    uint8_t checksum = 0;
+    for (uint16_t addr = 0x134; addr <= 0x14C; addr++) {
+        checksum = checksum - cart->Rom_buffer[addr] - 1;
+    }
+    if (checksum == cart->Rom_buffer[0x14D]) {
+        printf("Checksum verified !\n");
+    } else {
+        printf("Checksum not correct !\n");
+        exit(1);
+    }
 
-    uint8_t type;
-    bool Ram_enable;
-    uint8_t ram_size_code;
-    uint8_t rom_size_code;
+    // Cartridge controller chip [0x147]
+    cart->Rom_type = cart->Rom_buffer[0x147]; 
+    printf("The Cart_type is : %i\n",cart->Rom_type);
 
-    uint8_t current_bank;    // 2000–3FFF — ROM Bank Number (Write Only) (called the 5-bits register); 
-    uint8_t rom_bank_high2; // 4000–5FFF — RAM Bank Number or Upper Bits of ROM Bank Number (Write Only);
-    uint8_t banking_mode;  // later ...;
+    // RAM [0x149]
+    uint8_t ram = cart->Rom_buffer[0x149];
+    if (ram == 0) {
+        cart->Ram_enable = false;
+        printf("Cartridge does not embed RAM\n");
 
-} Cartridge;
+    } else {
+        cart->Ram_enable = true;
+        
+        switch (ram) {
+            case 0x1: // no RAM or unused;
+            printf("Ram is unused\n");
+            break;
 
-bool Cartridge_load(Cartridge *cart, const char *path) // Return True if the file loads into *ROM_struct;
-{
-    printf("\n-File name is : %s\n",path); //
+            case 0x2: // RAM 8KiB
+            cart->SRam_alloc = calloc(8192, sizeof(uint8_t));
+            if (cart->SRam_alloc == NULL) {
+                printf("Error: SRAM allocation failed\n");
+                exit(1);
+            }
+            break;
+
+            case 0X3: // RAM 16KiB
+            break;
+        
+            default:
+            break;
+        }
+    }
+    
+    // ROM size [0x148]
+    uint8_t size = cart->Rom_buffer[0x148];
+    printf("the length of the ROM is %i\n",size);
+}
+
+bool Cartridge_Load(Cartridge *cart, const char *path) {
+
+    // Need Check if allocation didn't work propely
+
+    printf("\n-File name is : %s\n",path);
     FILE *file = fopen(path, "rb");
     
     if (file == NULL) {
-        perror("Error with fopen ");
+        perror("Error with the ROM file : ");
         return false;
-    } 
-    else {
+    }
+
     fseek(file, 0, SEEK_END);
-    cart->rom_size = ftell(file); 
-    printf("-Rom_size is %zu long.\n",cart->rom_size); 
+    cart->Rom_size = ftell(file);
+    printf("Rom_size is %zu long.\n",cart->Rom_size);
 
     rewind(file);
-    cart->rom = malloc(cart->rom_size);
-    printf("-Malloc is at %p checked.\n",(void *)cart->rom);
+    cart->Rom_buffer = calloc(cart->Rom_size,sizeof(uint8_t));
+    printf("Malloc is at %p checked.\n",(void *)cart->Rom_buffer);
 
-    fread(cart->rom, 1, cart->rom_size , file);
+    fread(cart->Rom_buffer, 1, cart->Rom_size , file);
     fclose(file);
 
     return true;
-    }
 }
-
-void Header_Rom_Reader(Cartridge *cart) {
-    
-    /*  
-        0x0100 - 0x014F is the region where the header file belong (header file is in Bank0),
-        in the header file you can find a lot of importants informations about the cartridge.
-        https://gbdev.io/pandocs/The_Cartridge_Header.html ,gives every parts and their regions.
-        Most used to debug and verify, but I will develop it further in an other version.
-    */
-
-    uint8_t checksum = 0; // this section tries a cheksum located at [0x14D]
-    for (uint16_t address = 0x0134; address <= 0x014C; address++) {
-    checksum = checksum - cart->rom[address] - 1;
-    }
-    if (checksum == cart->rom[0x014D]) {
-        printf("-Checksum verified;\n");
-    } else {
-        printf("-Header not correct wrong checksum verify the integrity;\n"); 
-    }
-   
-    cart->type = cart->rom[0x147]; 
-    printf("-The Cart_type is : %i\n",cart->type);
-    
-    cart->ram_size_code = cart->rom[0x149];
-    if (cart->ram_size_code == 0) {
-        cart->Ram_enable = false;
-    } else {
-        cart->Ram_enable = true;
-    }
-    printf("-Bool status Ram Enabled = %b\n",cart->Ram_enable);
-
-    printf("-The Ram_size is : %u\n",cart->ram_size_code);
-
-    cart->rom_size_code = cart->rom[0x148]; //tells the lenght on one byte ; ex : 0x1 is 64KiB  / 0x2 is 128 KiB /0x3 is ..etc
-    printf("-The Rom_size_code is : %u\n",cart->rom_size_code);
-}
-
-// I deleted the cartridge_bus_dispatcher function because it causes bugs, now to know which Bank is in the switchable you need to go in Memory.c / if you want to know more read the text below ;D
-
-    /*
-        The MBC1 chip includes four registers that affect the behaviour of the chip.
-        All registers are effectively mapped to address ranges instead of single addresses. 
-        All registers are smaller than 8 bits, and unused bits are simply ignored during writes. 
-
-        The registers are not directly readable.
-        The explanation is easy, there is no inside registers. The CPU send a write instruction to the ROM but cannot write (read only memory) so instead the mbc chip will intercept the bus and the value, that's how he create his regs.
-
-        This 5-bit register (can reach(bank : $01-$1F) in decimal its bank1 to bank31) selects the ROM bank number for the 4000–7FFF region (The switchable one). 
-        Higher bits are discarded, exemple : writing $E1 (binary 11100001) - take only 5-bits (LSB one) to this register and would select bank $01.
-
-        Important : the bank n°0 cannot change place or dumped into another bank so anytime the cpu addresses to the bank0, the zero is immediatly replaced by a 1.
-    */
