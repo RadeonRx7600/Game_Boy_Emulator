@@ -20,59 +20,108 @@
 */
 
 typedef struct {
-	Cartridge *cart;
-	uint8_t Memory[0x2000];
-    uint8_t VRAM[0x2000];
-}RAM;
 
-uint8_t read_memory8 (RAM *ram, uint16_t addr) {
-	return ram->Memory[addr];
-}
+    uint8_t Memory[0xFFFF];
+}Memory;
 
-uint16_t read_memory16 (RAM *ram, uint16_t addr) {
-	return ram->Memory[addr] | ((uint16_t)ram->Memory[addr + 1] << 8);
-}
+uint8_t getParam8(Cartridge *cart, Memory *ram, uint16_t addr) {
 
-void write_memory8 (RAM *ram ,uint8_t value ,uint16_t addr) {
-	if (addr >= 0x2000 && addr <= 0x3FFF) {
-		ram->cart->current_bank = value & 0x03;
+	if (addr <= 0x3FFF) {
+		return cart->Rom_buffer[addr];
+	} 
+	else if (addr >= 0x4000 && addr <= 0x7FFF) {
+		return Read_Rom_bank(cart,addr);
 	}
-	else if (addr == 0xFF04) {
-		ram->Memory[0xFF04] = 0;
+	else {
+		return read_memory(ram, cart, addr);
+	}
+}
+
+uint16_t getParam16(Cartridge *cart, Memory *ram, uint16_t addr) {
+
+	uint8_t lo = getParam8(cart,ram, addr);
+    uint8_t hi = getParam8(cart, ram, addr + 1);
+
+    return (uint16_t)(lo | (hi << 8));
+}
+
+uint8_t Read_Rom_bank(Cartridge *cart, uint16_t addr) {
+
+	uint32_t offset = (uint32_t)cart->Current_ROM_bank * 0x4000 + (addr - 0x4000);
+	return cart->Rom_buffer[offset];
+}
+
+uint8_t read_memory(Memory *ram, Cartridge *cart, uint16_t addr) {
+
+	if (addr <= 0x3FFF) {
+		return cart->Rom_buffer[addr];
+	}
+	// 
+	else if (addr >= 0x4000 && addr <= 0x7FFF) {
+		return Read_Rom_bank(cart, addr);
+	}
+	// 
+	else if (addr >= 0xA000 && addr <= 0xBFFF) {
+		return Read_Ram_Bank(cart, addr);
+	}
+	//
+	else if (addr == 0xFF00) {
+		return Joypad_Status(ram);
+	}
+	//
+	else {
+		return ram->Memory[addr];
+	}
+}
+
+void write_memory(Memory *ram, Cartridge *cart, uint8_t value ,uint16_t addr) {
+	
+	// Switcable bank address
+	if (addr >= 0x2000 && addr <= 0x3FFF) {
+		uint8_t bank = value & 0x1F;
+		if (bank == 0) {
+			bank=1;
+		}
+		cart->Current_ROM_bank = bank;
+	}
+	// RAM address
+	else if (addr >= 0xA000 && addr <= 0xBFFF) {
+		Write_SRam_Bank(ram);
+	}
+	// ECHO RAM address
+	else if (addr >= 0xE000 && addr < 0xFE00) {
+		write_memory(ram, cart, value, addr - 0x2000);
+	}
+	// Restricted area
+	else if (addr >= 0xFEA0 && addr < 0xFEFF) {
+		// nothing writes
+	}
+	// LY register addr
+	else if (addr == 0xFF44) {
+		ram->Memory[0xFF44] = 0;
+	}
+	// DMA transfer
+	else if (addr == 0xFF46) {
+		DMA_transfer(ram , value);
 	}
 	else {
 		ram->Memory[addr] = value;
 	}
 }
 
-void write_memory16(RAM *ram, uint16_t value, uint16_t addr) {
-	if (addr >= 0x2000 && addr <= 0x3FFF) {
-		ram->cart->current_bank = value & 0x03;
-	}
-    ram->Memory[addr] = value;
-    ram->Memory[addr + 1] = value >> 8;
-
-	// can bug if Write uint16_t is written in DIV reg : TODO
-}
-
-uint8_t read_byte(Cartridge *cart, uint16_t address) {
-	if (addr < 0x4000) {
-		return cart->rom[addr];
-	}
-	else {
-		int16_t offset = cart->current_bank * 0x4000 + (addr - 0x4000);
-		return cart->rom[offset];
-	}
-}
-
-uint16_t read_word(Cartridge *cart, uint16_t address) {
+uint16_t read_memory16(Memory *ram, Cartridge*cart, uint8_t addr) {
 	
-		uint8_t lo = read_byte(cart, addr);
-    	uint8_t hi = read_byte(cart, addr + 1);
+	uint8_t lo = read_memory(ram, cart, addr);
+	uint8_t hi = read_memory(ram, cart, addr + 1);
 
-    	return (uint16_t)(lo | (hi << 8));
+	return (uint16_t)(lo | (hi << 8));
 }
 
-void DMA_transfer(uint8_t data) {
-	// later i did just fix a bug above !
+void write_memory16(Memory *ram, Cartridge *cart, uint16_t value ,uint16_t addr) {
+
+	write_memory(ram, cart, (uint8_t)(value & 0xFF), addr);
+	write_memory(ram, cart, (uint8_t)(value >> 8), addr + 1);
 }
+
+void DMA_transfer(Memory *ram, uint8_t data) {
+	}
