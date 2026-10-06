@@ -3,9 +3,13 @@
 #include<stdlib.h>
 #include<stdbool.h>
 
+#include"Cartridge.h"
+#include"CPU.h"
+
 /*
-	General Memory Map: 
-	  0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00) 
+	General Memory Map :
+
+	  0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00)
 	  4000-7FFF   16KB ROM Bank 01..NN (in cartridge, switchable bank number)
 	  8000-9FFF   8KB Video RAM (VRAM) (switchable bank 0-1 in CGB Mode)
 	  A000-BFFF   8KB External RAM     (in cartridge, switchable bank, if any)
@@ -16,36 +20,10 @@
 	  FEA0-FEFF   Not Usable
 	  FF00-FF7F   I/O Ports
 	  FF80-FFFE   High RAM (HRAM)
-	       FFFF   Interrupt Enable Register
+	    FFFF      Interrupt Enable Register
 */
 
-typedef struct {
-
-    uint8_t Memory[0xFFFF];
-}Memory;
-
-uint8_t getParam8(Cartridge *cart, Memory *ram, uint16_t addr) {
-
-	if (addr <= 0x3FFF) {
-		return cart->Rom_buffer[addr];
-	} 
-	else if (addr >= 0x4000 && addr <= 0x7FFF) {
-		return Read_Rom_bank(cart,addr);
-	}
-	else {
-		return read_memory(ram, cart, addr);
-	}
-}
-
-uint16_t getParam16(Cartridge *cart, Memory *ram, uint16_t addr) {
-
-	uint8_t lo = getParam8(cart,ram, addr);
-    uint8_t hi = getParam8(cart, ram, addr + 1);
-
-    return (uint16_t)(lo | (hi << 8));
-}
-
-uint8_t Read_Rom_bank(Cartridge *cart, uint16_t addr) {
+uint8_t Read_Rom_Bank(Cartridge *cart, uint16_t addr) {
 
 	uint32_t offset = (uint32_t)cart->Current_ROM_bank * 0x4000 + (addr - 0x4000);
 	return cart->Rom_buffer[offset];
@@ -53,22 +31,23 @@ uint8_t Read_Rom_bank(Cartridge *cart, uint16_t addr) {
 
 uint8_t read_memory(Memory *ram, Cartridge *cart, uint16_t addr) {
 
+	// Cartridge bank0
 	if (addr <= 0x3FFF) {
 		return cart->Rom_buffer[addr];
 	}
-	// 
+	// Cartridge switchable bank
 	else if (addr >= 0x4000 && addr <= 0x7FFF) {
-		return Read_Rom_bank(cart, addr);
+		return Read_Rom_Bank(cart, addr);
 	}
-	// 
+	// ROM ram embedded
 	else if (addr >= 0xA000 && addr <= 0xBFFF) {
-		return Read_Ram_Bank(cart, addr);
+		return Read_SRam_Bank(ram); // to add
 	}
-	//
+	// Joyapad
 	else if (addr == 0xFF00) {
-		return Joypad_Status(ram);
+		return Joypad_Status(ram); // to add
 	}
-	//
+	// Standard read
 	else {
 		return ram->Memory[addr];
 	}
@@ -86,7 +65,7 @@ void write_memory(Memory *ram, Cartridge *cart, uint8_t value ,uint16_t addr) {
 	}
 	// RAM address
 	else if (addr >= 0xA000 && addr <= 0xBFFF) {
-		Write_SRam_Bank(ram);
+		//Write_SRam_Bank(ram, value, addr);
 	}
 	// ECHO RAM address
 	else if (addr >= 0xE000 && addr < 0xFE00) {
@@ -102,7 +81,7 @@ void write_memory(Memory *ram, Cartridge *cart, uint8_t value ,uint16_t addr) {
 	}
 	// DMA transfer
 	else if (addr == 0xFF46) {
-		DMA_transfer(ram , value);
+		DMA_transfer(ram, cart, value);
 	}
 	else {
 		ram->Memory[addr] = value;
@@ -123,5 +102,18 @@ void write_memory16(Memory *ram, Cartridge *cart, uint16_t value ,uint16_t addr)
 	write_memory(ram, cart, (uint8_t)(value >> 8), addr + 1);
 }
 
-void DMA_transfer(Memory *ram, uint8_t data) {
-	}
+
+void Write_SRam_Bank(Memory *ram, uint8_t value, uint16_t addr) {} // to add
+
+uint8_t Read_SRam_Bank(Memory *ram, uint16_t addr) {} // to add
+
+uint8_t Joypad_Status(Memory *ram) {} // to add
+
+void DMA_transfer(Memory *ram, Cartridge *cart, uint8_t value) {
+    uint16_t src = (uint16_t)(value << 8);
+
+    for (int i = 0; i < 0xA0; i++) {
+        uint8_t byte = read_memory(ram, cart, src + i);
+        ram->Memory[0xFE00 + i] = byte;
+    }
+}
