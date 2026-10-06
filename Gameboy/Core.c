@@ -1,16 +1,16 @@
 /*
     GameBoy Emulator Project
 
-    29/07/2026 : Written in C (MAIN File) - a guided project
-    License : MIT
+    Project : Written in C (MAIN File) started : 29/07/2026 - a guided project
+    License : MIT License (when finish)
     Warning : Not responsable of the usage !
     Github  : https://github.com/RadeonRx7600/GameBoyEmu
 
     sources : https://cturt.github.io/cinoop.html //
-    		      https://gekkio.fi/files/gb-docs/gbctr.pdf //
-        		  https://gbdev.io/pandocs/MBC1.html //
-			        https://github.com/HFO4/gameboy.live // (very good)
-			        http://www.codeslinger.co.uk/pages/projects/gameboy.html //
+    		  https://gekkio.fi/files/gb-docs/gbctr.pdf //
+        	  https://gbdev.io/pandocs/MBC1.html //
+			  https://github.com/HFO4/gameboy.live // (very good)
+			  http://www.codeslinger.co.uk/pages/projects/gameboy.html 
 */
 
 #include<stdio.h>
