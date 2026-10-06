@@ -17,34 +17,6 @@
 #define TMA 0xFF06
 #define TAC 0xFF07
 
-typedef union {
-    uint16_t value;
-    struct {
-        uint8_t lo;
-        uint8_t hi;
-    };
-} Reg16;
-
-typedef struct {
-    Reg16 af;
-    Reg16 bc;
-    Reg16 de;
-    Reg16 hl;
-
-    uint16_t sp;
-    uint16_t pc;
-
-    bool zf;
-    bool nf;
-    bool hf;
-    bool cf;
-
-    bool HALTED;
-    bool PendingInterruptEnabled;
-    bool IME;
-
-} Registers;
-
 uint8_t check_interrupts(Registers *cpu, RAM *ram) {
 
     uint8_t IE = read_memory8(ram, IE_ADDR);
@@ -95,6 +67,54 @@ uint8_t check_interrupts(Registers *cpu, RAM *ram) {
     cpu->pc = ISR;
 
     return 20;
+}
+
+int update_timer(TIMER *timer, Memory *ram, Cartridge *cart, uint8_t cycles) {
+
+    //FF04 — DIV: Divider register
+    //FF05 — TIMA: Timer counter
+    //FF06 — TMA: Timer modulo
+    //FF07 — TAC: Timer control
+    
+    // DIV inc all the time 
+    timer->div_cycles += cycles;
+
+    while (timer->div_cycles >= 256) {
+        timer->div_cycles -= 256;
+        ram->Memory[DIV]++;
+    } 
+
+    uint8_t tac = read_memory(ram, cart, TAC);
+    bool timer_enable = (tac & 0x04) != 0;
+
+    if (!timer_enable) {
+        return 1;
+    }
+
+    uint16_t threshold;
+    switch (tac & 0x03) {
+        case 0x00: threshold = 1024; break; // 4096 Hz
+        case 0x01: threshold = 16;   break; // 262144 Hz
+        case 0x02: threshold = 64;   break; // 65536 Hz
+        default:   threshold = 256;  break; // 0x03 : 16384 Hz
+    }
+
+    timer->tima_cycles += cycles;
+    
+    while (timer->tima_cycles >= threshold) {
+        timer->tima_cycles -= threshold;
+
+        uint8_t tima = read_memory(ram, cart, TIMA);
+        // overflow
+        if (tima == 255) {
+            write_memory(ram, cart, read_memory(ram, cart, TMA), TIMA);
+            uint8_t IF = read_memory(ram,cart, IF_ADDR);
+            write_memory(ram,cart, (uint8_t)(IF | 0x04), IF_ADDR);
+        } else {
+            write_memory(ram,cart, (uint8_t)(tima + 1), TIMA);
+        }
+    }
+    return 0;
 }
 
 void init_GB(Registers *cpu, RAM *ram) {
